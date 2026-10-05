@@ -1,184 +1,35 @@
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Пульт дня</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-
-<style>
-  :root{
-    --bg:#EEF1F0;--surface:#FFFFFF;--surface-2:#F6F8F7;--ink:#16201F;--muted:#5D6B69;
-    --faint:#8A9794;--line:#DCE3E1;--line-strong:#C7D1CE;--accent:#0F766E;--accent-ink:#0A5A54;
-    --accent-soft:#D6EBE7;--good:#2F9E6B;--good-soft:#DAF0E4;--warn:#B9791A;--warn-soft:#F6E7C9;
-    --crit:#C24435;--crit-soft:#F6DAD5;
-    --shadow:0 1px 2px rgba(20,32,31,.05), 0 8px 24px -14px rgba(20,32,31,.25);--radius:14px;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#0D1514;--surface:#15201E;--surface-2:#111A19;--ink:#E9EFED;--muted:#94A3A0;
-      --faint:#6C7B78;--line:#243230;--line-strong:#2F3F3C;--accent:#4FD1C5;--accent-ink:#7FE0D6;
-      --accent-soft:#16302E;--good:#54c98d;--good-soft:#12271E;--warn:#D9A441;--warn-soft:#2A2212;
-      --crit:#E0665A;--crit-soft:#2E1815;--shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -16px rgba(0,0,0,.7);
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg:#0D1514;--surface:#15201E;--surface-2:#111A19;--ink:#E9EFED;--muted:#94A3A0;
-    --faint:#6C7B78;--line:#243230;--line-strong:#2F3F3C;--accent:#4FD1C5;--accent-ink:#7FE0D6;
-    --accent-soft:#16302E;--good:#54c98d;--good-soft:#12271E;--warn:#D9A441;--warn-soft:#2A2212;
-    --crit:#E0665A;--crit-soft:#2E1815;--shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -16px rgba(0,0,0,.7);
-  }
-
-  *{box-sizing:border-box}
-  body{background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:26px 40px}
-  .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
-  .eyebrow{font-family:"IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.13em;font-size:11px;color:var(--faint);font-weight:500}
-
-  .mast{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:18px}
-  .mast h1{font-family:"Fraunces",Georgia,serif;font-weight:500;font-size:clamp(24px,3.2vw,36px);letter-spacing:-.01em;margin:2px 0 0;text-wrap:balance}
-  .mast .who{color:var(--accent-ink)}
-  .theme-btn{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
-  .theme-btn:hover{border-color:var(--line-strong);color:var(--ink)}
-  .theme-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-  .nowbar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 22px;display:grid;grid-template-columns:auto 1px 1fr;gap:22px;align-items:center;margin-bottom:20px}
-  .clock{display:flex;flex-direction:column;gap:2px}
-  .clock .time{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-weight:500;font-size:clamp(32px,4.6vw,50px);line-height:1;letter-spacing:-.02em}
-  .clock .time .sec{color:var(--accent);font-size:.5em;vertical-align:super;margin-left:2px}
-  .clock .date{color:var(--muted);font-size:13.5px;margin-top:6px}
-  .vr{background:var(--line);width:1px;height:64px;align-self:center}
-  .meters{display:grid;grid-template-columns:1fr 1fr;gap:16px 26px}
-  .meter .m-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px}
-  .meter .m-label{font-size:12px;color:var(--muted)}
-  .meter .m-val{font-size:12px;color:var(--ink);white-space:nowrap}
-  .track{height:7px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
-  .track > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent-ink));transition:width .4s ease}
-  .meter.week .track > i{background:linear-gradient(90deg,var(--warn),var(--accent))}
-
-  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-  .grid .panel{margin-bottom:0}
-  .p-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px 13px;border-bottom:1px solid var(--line)}
-  .p-head .t{display:flex;flex-direction:column;gap:3px}
-  .p-head h2{font-family:"Fraunces",serif;font-weight:500;font-size:18px;margin:0}
-  .p-body{padding:6px 10px 12px}
-
-  /* add form */
-  .addf{display:flex;gap:8px;flex-wrap:wrap;padding:10px 8px 6px;align-items:center}
-  .addf input,.addf select{font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
-  .addf input::placeholder{color:var(--faint)}
-  .addf input:focus,.addf select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
-  .addf .grow{flex:1 1 120px}
-  .addf input[type=date]{flex:0 0 auto;color:var(--muted)}
-  .addf input.num{flex:0 0 96px;font-family:"IBM Plex Mono",monospace}
-  .addbtn{font-family:inherit;font-weight:600;font-size:13px;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:8px 14px;cursor:pointer;white-space:nowrap}
-  .addbtn:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
-  .addbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-  :root[data-theme="dark"] .addbtn,:root:not([data-theme="light"]) .addbtn{color:#08201E}
-  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .addbtn{color:#08201E}}
-
-  .listwrap{margin-top:4px}
-  .empty{padding:6px 12px 2px;font-size:12px;color:var(--faint)}
-  .ghost{opacity:.55}
-  .ghost .row-x{visibility:hidden}
-  .extag{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);padding:2px 6px;border-radius:5px;margin-left:8px;vertical-align:middle}
-
-  /* generic row */
-  .row{display:grid;align-items:center;gap:11px;padding:9px 12px;border-radius:9px}
-  .row + .row{border-top:1px solid var(--line)}
-  .row:hover{background:var(--surface-2)}
-  .row-x{border:0;background:none;color:var(--faint);cursor:pointer;font-size:15px;line-height:1;padding:4px;border-radius:6px}
-  .row-x:hover{color:var(--crit);background:var(--crit-soft)}
-  /* let text cells shrink instead of pushing controls off-row */
-  .hw>div:nth-child(2),.hb>div:nth-child(2),.bl>div:nth-child(2){min-width:0}
-  .hb .nm,.bl .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-  /* homework */
-  .hw{grid-template-columns:20px 1fr auto auto}
-  .box{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;color:#fff;font-size:12px;cursor:pointer;flex:none}
-  .hw.done .box{background:var(--good);border-color:var(--good)}
-  .hw .subj{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
-  .hw .tt{font-size:14px;font-weight:500;margin-top:1px}
-  .hw.done .tt{color:var(--faint);text-decoration:line-through}
-  .hw.done .subj{color:var(--faint)}
-
-  .due{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;padding:4px 9px;border-radius:7px;white-space:nowrap;border:1px solid transparent;text-align:center}
-  .due.crit{color:var(--crit);background:var(--crit-soft);border-color:color-mix(in srgb,var(--crit) 30%,transparent)}
-  .due.warn{color:var(--warn);background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
-  .due.good{color:var(--good);background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 25%,transparent)}
-  .row.done .due{opacity:.45;filter:grayscale(.5)}
-
-  /* habits */
-  .hb{grid-template-columns:30px 1fr auto auto auto}
-  .hb .emo{font-size:19px;text-align:center}
-  .hb .nm{font-size:14px;font-weight:500}
-  .hb .streak{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);white-space:nowrap}
-  .hb .streak b{color:var(--accent-ink)}
-  .dots{display:flex;gap:4px}
-  .dots i{width:9px;height:9px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line-strong)}
-  .dots i.on{background:var(--accent);border-color:var(--accent)}
-  .today{font-family:inherit;font-size:12px;font-weight:600;border-radius:8px;padding:6px 11px;cursor:pointer;white-space:nowrap;border:1px solid var(--line-strong);background:var(--surface);color:var(--muted)}
-  .today.on{background:var(--good);border-color:var(--good);color:#fff}
-  .today:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-  /* bills */
-  .bl{grid-template-columns:30px 1fr auto auto auto}
-  .bl .emo{font-size:17px;text-align:center}
-  .bl .nm{font-size:14px;font-weight:500}
-  .bl .note{font-size:12px;color:var(--faint);margin-top:1px}
-  .bl.paid .nm{color:var(--faint);text-decoration:line-through}
-  .amt{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;text-align:right;white-space:nowrap}
-  .bl.paid .amt{color:var(--faint)}
-  .paybox{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line-strong);display:grid;place-items:center;color:#fff;font-size:12px;cursor:pointer}
-  .bl.paid .paybox{background:var(--good);border-color:var(--good)}
-  .summ{display:flex;justify-content:space-between;align-items:baseline;margin:2px 10px 8px;padding:6px 4px 0;gap:12px}
-  .summ .lg{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:19px}
-  .summ .sm{font-size:12px;color:var(--muted)}
-
-  .note{padding:8px 14px 2px;font-size:12px;color:var(--faint)}
-
-  .mast-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .tbtn{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer}
-  .tbtn:hover{border-color:var(--line-strong);color:var(--ink)}
-  .tbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-  @media (max-width:760px){
-    .grid{grid-template-columns:1fr}
-    .nowbar{grid-template-columns:1fr;gap:14px}
-    .vr{display:none}
-    .nowbar > .clock{border-bottom:1px solid var(--line);padding-bottom:12px}
-  }
-  @media (max-width:560px){
-    .wrap{padding-inline:14px;padding-block:20px 32px}
-    .nowbar{padding:16px}
-    .meters{gap:14px 18px}
-    .dots{display:none}
-    .hb{grid-template-columns:26px 1fr auto auto}
-    .bl{grid-template-columns:22px 1fr auto auto}
-    .row{gap:9px;padding:9px 8px}
-    .addf{gap:7px;padding:10px 4px 6px}
-    .addf .grow,.addf #hwSubj{flex:1 1 100%}
-    .addf input[type=date]{flex:1 1 46%}
-    .addf .num{flex:1 1 40%}
-    .addbtn{flex:1 1 100%}
-    .today{padding:6px 9px}
-    .summ .lg{font-size:17px}
-  }
-  @media (max-width:380px){
-    .hb .streak{font-size:11px}
-    .today{font-size:11px;padding:5px 8px}
-  }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-</style>
-
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Пульт дня</title>
+  <meta name="description" content="Расписание дедлайнов, привычки и платежи на одном экране.">
+  <meta name="theme-color" content="#EEF1F0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0D1514" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Пульт дня">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try { var t = localStorage.getItem("daydeck:theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  </script>
+</head>
+<body>
 <div class="wrap">
 
-  <div class="mast">
-    <div>
-      <div class="eyebrow">Личный пульт · обновляется сам</div>
-      <h1>Добрый день, <span class="who">D1M0N</span> — вот ваш день</h1>
-    </div>
+  <header class="mast">
+    <h1 id="greeting">Добрый день</h1>
     <div class="mast-tools">
+      <button class="tbtn" id="editBtn" type="button">Настроить</button>
       <button class="tbtn" id="authBtn" type="button" hidden></button>
       <button class="tbtn" id="expBtn" type="button" title="Сохранить все записи в файл">⤓ Экспорт</button>
       <button class="tbtn" id="impBtn" type="button" title="Загрузить записи из файла">⤒ Импорт</button>
@@ -187,7 +38,7 @@
         <span id="themeIcon">◐</span><span id="themeLbl">Тема</span>
       </button>
     </div>
-  </div>
+  </header>
 
   <section class="nowbar" aria-label="Время и прогресс">
     <div class="clock">
@@ -198,438 +49,29 @@
     <div class="meters">
       <div class="meter day">
         <div class="m-top"><span class="m-label">День пройден</span><span class="m-val mono" id="dayPct">—</span></div>
-        <div class="track"><i id="dayBar" style="width:0%"></i></div>
+        <div class="track"><i id="dayBar"></i></div>
       </div>
       <div class="meter week">
         <div class="m-top"><span class="m-label">Неделя пройдена</span><span class="m-val mono" id="weekPct">—</span></div>
-        <div class="track"><i id="weekBar" style="width:0%"></i></div>
+        <div class="track"><i id="weekBar"></i></div>
       </div>
-      <div class="meter">
-        <div class="m-top"><span class="m-label">ДЗ на 7 дней</span><span class="m-val mono" id="hwMeta">—</span></div>
-        <div class="track"><i id="hwBar" style="width:0%"></i></div>
+      <div class="meter" id="hwMeter" hidden>
+        <div class="m-top"><span class="m-label">Дедлайны на 7 дней</span><span class="m-val mono" id="hwMeta">—</span></div>
+        <div class="track"><i id="hwBar"></i></div>
       </div>
-      <div class="meter">
+      <div class="meter" id="habMeter" hidden>
         <div class="m-top"><span class="m-label">Привычки сегодня</span><span class="m-val mono" id="habMeta">—</span></div>
-        <div class="track"><i id="habBar" style="width:0%"></i></div>
+        <div class="track"><i id="habBar"></i></div>
       </div>
     </div>
   </section>
 
-  <!-- ДНЕВНИК -->
-  <section class="panel" aria-label="Дневник — дз и дедлайны">
-    <div class="p-head">
-      <div class="t"><h2>Дневник — дз и дедлайны</h2><span class="eyebrow" id="hwSub">—</span></div>
-    </div>
-    <div class="p-body">
-      <div class="addf">
-        <input class="grow" id="hwSubj" type="text" placeholder="Предмет (напр. Матан)" aria-label="Предмет" style="flex:0 1 150px">
-        <input class="grow" id="hwTitle" type="text" placeholder="Что сделать" aria-label="Задание">
-        <input id="hwDue" type="date" aria-label="Срок">
-        <button class="addbtn" id="hwAdd" type="button">Добавить</button>
-      </div>
-      <div class="listwrap" id="hwList"></div>
-      <div class="note">Нажмите на квадрат слева, чтобы отметить выполненным · × удаляет запись.</div>
-    </div>
-  </section>
-
-  <div class="grid">
-
-    <!-- ПРИВЫЧКИ -->
-    <section class="panel" aria-label="Привычки">
-      <div class="p-head">
-        <div class="t"><h2>Привычки</h2><span class="eyebrow" id="habSub">—</span></div>
-      </div>
-      <div class="p-body">
-        <div class="addf">
-          <input id="habEmo" type="text" placeholder="🏃" aria-label="Значок" maxlength="2" style="flex:0 0 52px;text-align:center">
-          <input class="grow" id="habName" type="text" placeholder="Новая привычка" aria-label="Название привычки">
-          <button class="addbtn" id="habAdd" type="button">Добавить</button>
-        </div>
-        <div class="listwrap" id="habList"></div>
-        <div class="note">«Сегодня» отмечает день · точки — последние 7 дней · серия считается автоматически.</div>
-      </div>
-    </section>
-
-    <!-- ФИНАНСЫ -->
-    <section class="panel" aria-label="Финансы и подписки">
-      <div class="p-head">
-        <div class="t"><h2>Финансы и подписки</h2><span class="eyebrow" id="blSub">—</span></div>
-      </div>
-      <div class="p-body">
-        <div class="summ">
-          <div><div class="lg" id="dueTotal">—</div><div class="sm">не оплачено в этом месяце</div></div>
-          <div style="text-align:right"><div class="lg" id="nextCd" style="color:var(--accent-ink)">—</div><div class="sm" id="nextName">—</div></div>
-        </div>
-        <div class="addf">
-          <input class="grow" id="blName" type="text" placeholder="Платёж (напр. Аренда)" aria-label="Название">
-          <input class="num" id="blAmt" type="number" min="0" step="1" placeholder="₽" aria-label="Сумма">
-          <input id="blDue" type="date" aria-label="Дата списания">
-          <button class="addbtn" id="blAdd" type="button">Добавить</button>
-        </div>
-        <div class="listwrap" id="blList"></div>
-        <div class="note">Отметьте квадрат, когда оплатили — суммы пересчитаются сразу.</div>
-      </div>
-    </section>
-
-  </div>
+  <main class="blocks" id="blocks"></main>
 
 </div>
 
-<script>
-(function(){
-  "use strict";
-  var $=function(id){return document.getElementById(id)};
-  var pad=function(n){return(n<10?"0":"")+n};
-  var MIN=60000,H=3600000,D=86400000;
-  var state={homework:[],habits:[],bills:[]};
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  /* ================== НАСТРОЙКА СИНХРОНИЗАЦИИ (Firebase) ==================
-     Пока здесь null — дашборд работает офлайн (данные в этом браузере).
-     Вставьте сюда конфиг из вашего проекта Firebase, чтобы включить
-     синхронизацию между устройствами и вход через Google. Пример ниже.
-     Инструкция — в файле README.
-  ------------------------------------------------------------------------ */
-
-  // Your web app's Firebase configuration
-  const FIREBASE_CONFIG = {
-    apiKey: "***",
-    authDomain: "***.firebaseapp.com",
-    projectId: "***",
-    storageBucket: "***.firebasestorage.app",
-    messagingSenderId: "***",
-    appId: "1:***:web:46fe821fb90f25c8b710cd"
-  };
-
-  /* ====================================================================== */
-
-  /* ---------- theme ---------- */
-  var root=document.documentElement;
-  function sysDark(){return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches}
-  function isDark(){var t=root.getAttribute("data-theme");return t?t==="dark":sysDark()}
-  function paintTheme(){$("themeIcon").textContent=isDark()?"☾":"☀";$("themeLbl").textContent=isDark()?"Тёмная":"Светлая"}
-  $("themeBtn").addEventListener("click",function(){root.setAttribute("data-theme",isDark()?"light":"dark");paintTheme()});
-  if(window.matchMedia){try{window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",paintTheme)}catch(e){}}
-  paintTheme();
-
-  /* ---------- helpers ---------- */
-  function pMerge(t,s){for(var k in s){if(s[k]&&typeof s[k]==="object"&&!Array.isArray(s[k])){t[k]=pMerge(typeof t[k]==="object"&&t[k]?t[k]:{},s[k])}else{t[k]=s[k]}}return t}
-  function money(n){return "₽"+Number(n||0).toLocaleString("ru-RU")}
-  function dayKey(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
-  function parseDue(v){if(!v)return 0;var p=v.split("-");return new Date(+p[0],+p[1]-1,+p[2],23,0,0).getTime()}
-  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-
-  function dueClass(ms){var d=ms-Date.now();if(d<24*H)return"crit";if(d<3*D)return"warn";return"good"}
-  function dueLabel(ms){
-    var diff=ms-Date.now(),past=diff<0,a=Math.abs(diff);
-    var days=Math.floor(a/D),hrs=Math.floor((a%D)/H);
-    if(past){return days>=1?("просрочено "+days+"д"):(hrs>=1?("просрочено "+hrs+"ч"):"просрочено")}
-    if(days>=1)return"через "+days+"д";
-    if(hrs>=1)return"сегодня · "+hrs+"ч";
-    return"сегодня";
-  }
-  function humanCd(ms){
-    if(ms<=0)return"сейчас";
-    var d=Math.floor(ms/D),h=Math.floor((ms%D)/H),m=Math.floor((ms%H)/MIN),s=Math.floor((ms%MIN)/1000);
-    if(d>0)return d+"д "+h+"ч";if(h>0)return h+"ч "+pad(m)+"м";if(m>0)return m+"м "+pad(s)+"с";return s+"с";
-  }
-  function streak(log){if(!log)return 0;var d=new Date();if(!log[dayKey(d)])d.setDate(d.getDate()-1);var s=0;while(log[dayKey(d)]){s++;d.setDate(d.getDate()-1)}return s}
-
-  /* ---------- storage abstraction ---------- */
-  function localStore(){
-    var LS=window.localStorage,listeners={};
-    function load(c){try{return JSON.parse(LS.getItem("daydeck:"+c)||"[]")}catch(e){return[]}}
-    function save(c,a){try{LS.setItem("daydeck:"+c,JSON.stringify(a))}catch(e){}(listeners[c]||[]).forEach(function(f){f(a.slice())})}
-    return{
-      mode:"local",
-      watch:function(c,cb){(listeners[c]=listeners[c]||[]).push(cb);cb(load(c));return function(){}},
-      add:function(c,data){var a=load(c);a.push(pMerge({id:"id"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)},data));save(c,a)},
-      update:function(c,id,patch){var a=load(c),i=a.findIndex(function(x){return x.id===id});if(i>=0){a[i]=pMerge(a[i],patch);save(c,a)}},
-      remove:function(c,id){save(c,load(c).filter(function(x){return x.id!==id}))},
-      replaceAll:function(c,arr){save(c,(arr||[]).map(function(x){return pMerge({id:"id"+Math.random().toString(36).slice(2,10)},x)}))}
-    };
-  }
-  function dbStore(db){
-    return{
-      mode:"db",
-      watch:function(c,cb){return db.collection(c).onSnapshot(function(s){cb(s.docs.map(function(d){return pMerge({id:d.id},d.data())}))},function(){})},
-      add:function(c,data){db.collection(c).add(data).catch(function(){})},
-      update:function(c,id,patch){db.collection(c).doc(id).update(patch).catch(function(){})},
-      remove:function(c,id){db.collection(c).doc(id).delete().catch(function(){})},
-      replaceAll:function(c,arr){
-        (state[c]||[]).forEach(function(x){db.collection(c).doc(x.id).delete().catch(function(){})});
-        (arr||[]).forEach(function(x){var d={};for(var k in x){if(k!=="id")d[k]=x[k]}db.collection(c).add(d).catch(function(){})});
-      }
-    };
-  }
-
-  /* ---------- Firebase store (Firestore + вход Google) ---------- */
-  function loadScript(src){return new Promise(function(res,rej){var s=document.createElement("script");s.src=src;s.onload=res;s.onerror=function(){rej(new Error(src))};document.head.appendChild(s)})}
-  function loadFirebase(){
-    var b="https://www.gstatic.com/firebasejs/10.12.5/";
-    return loadScript(b+"firebase-app-compat.js")
-      .then(function(){return loadScript(b+"firebase-auth-compat.js")})
-      .then(function(){return loadScript(b+"firebase-firestore-compat.js")});
-  }
-  function fbStore(fs,uid){
-    var ref=fs.collection("users").doc(uid),cache={homework:[],habits:[],bills:[]},listeners={},docUnsub=null;
-    function notify(c){(listeners[c]||[]).forEach(function(f){f(cache[c].slice())})}
-    function write(c){var o={};o[c]=cache[c];ref.set(o,{merge:true}).catch(function(){})}
-    docUnsub=ref.onSnapshot(function(snap){
-      var d=snap.exists?(snap.data()||{}):{};
-      ["homework","habits","bills"].forEach(function(c){cache[c]=Array.isArray(d[c])?d[c]:[];notify(c)});
-    },function(){});
-    return{
-      mode:"firebase",
-      _stop:function(){if(docUnsub){docUnsub();docUnsub=null}},
-      watch:function(c,cb){(listeners[c]=listeners[c]||[]).push(cb);cb(cache[c].slice());return function(){var l=listeners[c]||[],i=l.indexOf(cb);if(i>=0)l.splice(i,1)}},
-      add:function(c,data){cache[c]=cache[c].concat([pMerge({id:"id"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)},data)]);notify(c);write(c)},
-      update:function(c,id,patch){cache[c]=cache[c].map(function(x){return x.id===id?pMerge(pMerge({},x),patch):x});notify(c);write(c)},
-      remove:function(c,id){cache[c]=cache[c].filter(function(x){return x.id!==id});notify(c);write(c)},
-      replaceAll:function(c,arr){cache[c]=(arr||[]).map(function(x){return pMerge({id:"id"+Math.random().toString(36).slice(2,10)},x)});notify(c);write(c)}
-    };
-  }
-  function startFirebase(){
-    loadFirebase().then(function(){
-      try{firebase.initializeApp(FIREBASE_CONFIG)}catch(e){}
-      var auth=firebase.auth(),fs=firebase.firestore(),authBtn=$("authBtn");
-      authBtn.hidden=false;
-      authBtn.addEventListener("click",function(){
-        if(auth.currentUser){auth.signOut()}
-        else{auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(){})}
-      });
-      auth.onAuthStateChanged(function(user){
-        if(user){authBtn.textContent="Выйти";authBtn.title=user.email||"";setStore(fbStore(fs,user.uid))}
-        else{authBtn.textContent="Войти через Google";authBtn.title="Синхронизация между устройствами";setStore(localStore())}
-      });
-    }).catch(function(){setStore(localStore())});
-  }
-
-  var store=null;
-  function initStore(){
-    if(window.claude&&typeof window.claude.use==="function"){
-      var done=false;
-      window.claude.use("db").then(function(db){if(done)return;done=true;setStore(db?dbStore(db):localStore())})
-        .catch(function(){if(done)return;done=true;setStore(localStore())});
-      setTimeout(function(){if(done)return;done=true;setStore(localStore())},9000);
-      return;
-    }
-    if(FIREBASE_CONFIG){startFirebase();return}
-    setStore(localStore());
-  }
-  function setStore(s){
-    if(store&&store._stop){try{store._stop()}catch(e){}}
-    store=s;
-    wireForms();
-    store.watch("homework",function(a){state.homework=a;renderHw()});
-    store.watch("habits",function(a){state.habits=a;renderHab()});
-    store.watch("bills",function(a){state.bills=a;renderBl()});
-  }
-
-  /* ---------- example (empty-state) rows ---------- */
-  var now0=new Date(),sod0=new Date(now0);sod0.setHours(0,0,0,0);var SOD=sod0.getTime();
-  var exHw=[
-    {subj:"Матан",   title:"Сдать типовой расчёт №3", due:SOD+1*D+23*H},
-    {subj:"История", title:"Эссе, 2 страницы",         due:SOD+4*D+23*H}
-  ];
-  var exHab=[
-    {emo:"🏃",name:"Зарядка",   log:mkLog([1,1,0,1,1,0,0])},
-    {emo:"📚",name:"Английский",log:mkLog([1,1,1,1,0,1,1])}
-  ];
-  var exBl=[
-    {emo:"📺",name:"Netflix",note:"Подписка",amt:599, due:SOD+2*D+23*H},
-    {emo:"🏠",name:"Аренда",  note:"Жильё",   amt:45000,due:SOD+6*D+23*H}
-  ];
-  function mkLog(arr){var o={},d=new Date();d.setDate(d.getDate()-6);for(var i=0;i<7;i++){if(arr[i])o[dayKey(d)]=true;d.setDate(d.getDate()+1)}return o}
-
-  /* ---------- render: homework ---------- */
-  function renderHw(){
-    var list=$("hwList"),items=state.homework.slice(),ghost=items.length===0;
-    if(ghost)items=exHw.map(function(x){return pMerge({id:"ex",_ex:true,done:false},x)});
-    items.sort(function(a,b){return (a.done-b.done)||(a.due-b.due)});
-    list.innerHTML="";
-    items.forEach(function(t){
-      var r=document.createElement("div");
-      r.className="row hw"+(t.done?" done":"")+(t._ex?" ghost":"");
-      r.innerHTML='<div class="box" role="button" tabindex="0" aria-label="Выполнено">'+(t.done?"✓":"")+'</div>'+
-        '<div><div class="subj">'+esc(t.subj||"—")+(t._ex?'<span class="extag">пример</span>':'')+'</div><div class="tt">'+esc(t.title)+'</div></div>'+
-        '<div class="due" data-due="'+t.due+'"></div>'+
-        '<button class="row-x" type="button" aria-label="Удалить">×</button>';
-      if(!t._ex){
-        var box=r.querySelector(".box");
-        var tg=function(){store.update("homework",t.id,{done:!t.done})};
-        box.addEventListener("click",tg);
-        box.addEventListener("keydown",function(e){if(e.key===" "||e.key==="Enter"){e.preventDefault();tg()}});
-        r.querySelector(".row-x").addEventListener("click",function(){store.remove("homework",t.id)});
-      }
-      list.appendChild(r);
-    });
-    if(ghost){var e=document.createElement("div");e.className="empty";e.textContent="Пример выше — добавьте своё задание через форму.";list.appendChild(e)}
-    tick();
-  }
-
-  /* ---------- render: habits ---------- */
-  function renderHab(){
-    var list=$("habList"),items=state.habits.slice(),ghost=items.length===0;
-    if(ghost)items=exHab.map(function(x){return pMerge({id:"ex",_ex:true},x)});
-    list.innerHTML="";
-    var tk=dayKey(new Date());
-    items.forEach(function(h){
-      var log=h.log||{},onToday=!!log[tk],st=streak(log);
-      var dots="";var d=new Date();d.setDate(d.getDate()-6);
-      for(var i=0;i<7;i++){dots+='<i class="'+(log[dayKey(d)]?"on":"")+'"></i>';d.setDate(d.getDate()+1)}
-      var r=document.createElement("div");
-      r.className="row hb"+(h._ex?" ghost":"");
-      r.innerHTML='<div class="emo">'+esc(h.emo||"•")+'</div>'+
-        '<div><div class="nm">'+esc(h.name)+(h._ex?'<span class="extag">пример</span>':'')+'</div></div>'+
-        '<div class="dots">'+dots+'</div>'+
-        '<div class="streak">серия <b>'+st+'</b></div>'+
-        '<button class="today'+(onToday?" on":"")+'" type="button">'+(onToday?"✓ сегодня":"сегодня")+'</button>'+
-        (h._ex?'':'<button class="row-x" type="button" aria-label="Удалить">×</button>');
-      if(!h._ex){
-        r.querySelector(".today").addEventListener("click",function(){
-          var patch={log:{}};patch.log[tk]=!onToday;store.update("habits",h.id,patch);
-        });
-        r.querySelector(".row-x").addEventListener("click",function(){store.remove("habits",h.id)});
-      }
-      list.appendChild(r);
-    });
-    if(ghost){var e=document.createElement("div");e.className="empty";e.textContent="Пример выше — добавьте свою привычку через форму.";list.appendChild(e)}
-    tick();
-  }
-
-  /* ---------- render: bills ---------- */
-  function renderBl(){
-    var list=$("blList"),items=state.bills.slice(),ghost=items.length===0;
-    if(ghost)items=exBl.map(function(x){return pMerge({id:"ex",_ex:true,paid:false},x)});
-    items.sort(function(a,b){return (a.paid-b.paid)||(a.due-b.due)});
-    list.innerHTML="";
-    items.forEach(function(b){
-      var r=document.createElement("div");
-      r.className="row bl"+(b.paid?" paid":"")+(b._ex?" ghost":"");
-      r.innerHTML='<div class="paybox" role="button" tabindex="0" aria-label="Оплачено">'+(b.paid?"✓":"")+'</div>'+
-        '<div><div class="nm">'+esc(b.name)+(b._ex?'<span class="extag">пример</span>':'')+'</div><div class="note">'+esc(b.note||"")+'</div></div>'+
-        '<div class="amt">'+money(b.amt)+'</div>'+
-        '<div class="due" data-due="'+b.due+'"></div>'+
-        '<button class="row-x" type="button" aria-label="Удалить">×</button>';
-      if(!b._ex){
-        var box=r.querySelector(".paybox");
-        var tg=function(){store.update("bills",b.id,{paid:!b.paid})};
-        box.addEventListener("click",tg);
-        box.addEventListener("keydown",function(e){if(e.key===" "||e.key==="Enter"){e.preventDefault();tg()}});
-        r.querySelector(".row-x").addEventListener("click",function(){store.remove("bills",b.id)});
-      }
-      list.appendChild(r);
-    });
-    if(ghost){var e=document.createElement("div");e.className="empty";e.textContent="Пример выше — добавьте свой платёж через форму.";list.appendChild(e)}
-    tick();
-  }
-
-  /* ---------- forms ---------- */
-  var wired=false;
-  function wireForms(){
-    if(wired)return;wired=true;
-    $("hwAdd").addEventListener("click",function(){
-      var title=$("hwTitle").value.trim();if(!title)return;
-      store.add("homework",{subj:$("hwSubj").value.trim(),title:title,due:parseDue($("hwDue").value)||(Date.now()+D),done:false});
-      $("hwSubj").value="";$("hwTitle").value="";$("hwDue").value="";$("hwTitle").focus();
-    });
-    $("habAdd").addEventListener("click",function(){
-      var name=$("habName").value.trim();if(!name)return;
-      store.add("habits",{emo:$("habEmo").value.trim()||"✅",name:name,log:{}});
-      $("habEmo").value="";$("habName").value="";$("habName").focus();
-    });
-    $("blAdd").addEventListener("click",function(){
-      var name=$("blName").value.trim();if(!name)return;
-      store.add("bills",{emo:"💳",name:name,note:"",amt:+$("blAmt").value||0,due:parseDue($("blDue").value)||(Date.now()+D),paid:false});
-      $("blName").value="";$("blAmt").value="";$("blDue").value="";$("blName").focus();
-    });
-    [["hwTitle","hwAdd"],["hwSubj","hwAdd"],["habName","habAdd"],["blName","blAdd"],["blAmt","blAdd"]].forEach(function(p){
-      $(p[0]).addEventListener("keydown",function(e){if(e.key==="Enter")$(p[1]).click()});
-    });
-    // export / import (для хостинга и офлайна)
-    $("expBtn").addEventListener("click",function(){
-      var data={app:"pult-dnya",version:1,exportedAt:new Date().toISOString(),
-        homework:state.homework,habits:state.habits,bills:state.bills};
-      var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-      var url=URL.createObjectURL(blob),a=document.createElement("a");
-      a.href=url;a.download="pult-dnya-backup.json";document.body.appendChild(a);a.click();
-      a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1500);
-    });
-    $("impBtn").addEventListener("click",function(){$("impFile").click()});
-    $("impFile").addEventListener("change",function(e){
-      var f=e.target.files&&e.target.files[0];if(!f){return}
-      var rd=new FileReader();
-      rd.onload=function(){
-        try{
-          var o=JSON.parse(rd.result);
-          if(!o||(!o.homework&&!o.habits&&!o.bills)){window.alert("Это не похоже на файл резервной копии Пульта дня.");return}
-          if(!window.confirm("Заменить текущие записи данными из файла?"))return;
-          ["homework","habits","bills"].forEach(function(c){store.replaceAll(c,o[c]||[])});
-        }catch(err){window.alert("Не удалось прочитать файл резервной копии.")}
-      };
-      rd.readAsText(f);e.target.value="";
-    });
-  }
-
-  /* ---------- live tick ---------- */
-  var days=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
-  var dshort=["вс","пн","вт","ср","чт","пт","сб"];
-  var months=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
-  var tz="";try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||""}catch(e){}
-
-  // cached refs (once) + write-guards to avoid touching the DOM when unchanged
-  var E={};["clock","sec","dateline","dayBar","dayPct","weekBar","weekPct","hwSub","hwMeta","hwBar",
-    "habSub","habMeta","habBar","dueTotal","blSub","nextCd","nextName"].forEach(function(k){E[k]=$(k)});
-  var clockTxt=E.clock.firstChild;
-  function setTxt(el,v){if(el._v!==v){el._v=v;el.textContent=v}}
-  function setW(el,v){if(el._w!==v){el._w=v;el.style.width=v}}
-
-  function tick(){
-    var now=new Date(),nowMs=now.getTime();
-    setTxt(clockTxt,pad(now.getHours())+":"+pad(now.getMinutes()));
-    setTxt(E.sec,pad(now.getSeconds()));
-    setTxt(E.dateline,days[now.getDay()]+", "+now.getDate()+" "+months[now.getMonth()]+" "+now.getFullYear()+(tz?" · "+tz:""));
-
-    var sod=new Date(now);sod.setHours(0,0,0,0);var sodMs=sod.getTime();
-    var dp=(nowMs-sodMs)/D;
-    setW(E.dayBar,(dp*100).toFixed(1)+"%");setTxt(E.dayPct,Math.round(dp*100)+"%");
-    var dow=(now.getDay()+6)%7,wp=(dow*D+(nowMs-sodMs))/(7*D);
-    setW(E.weekBar,(wp*100).toFixed(1)+"%");setTxt(E.weekPct,dshort[now.getDay()]+" · "+Math.round(wp*100)+"%");
-
-    // due chips everywhere
-    var chips=document.querySelectorAll(".due[data-due]");
-    for(var i=0;i<chips.length;i++){
-      var c=chips[i],ms=+c.getAttribute("data-due"),off=c.parentNode.classList.contains("done")||c.parentNode.classList.contains("paid");
-      var txt=off?"—":dueLabel(ms),cls=off?"due":"due "+dueClass(ms);
-      if(c._v!==txt){c._v=txt;c.textContent=txt}
-      if(c._c!==cls){c._c=cls;c.className=cls}
-    }
-
-    // homework meter
-    var hw=state.homework,hwOpen=0,hwSoon=0,hwOver=0;
-    for(var a=0;a<hw.length;a++){if(!hw[a].done){hwOpen++;if(hw[a].due-nowMs<7*D)hwSoon++;if(hw[a].due<nowMs)hwOver++}}
-    setTxt(E.hwSub,hw.length?(hwOpen+" активн."+(hwOver?" · "+hwOver+" просроч.":"")):"пусто — добавьте первое задание");
-    setTxt(E.hwMeta,hw.length?(hwSoon+" шт."):"—");
-    setW(E.hwBar,(hw.length?(hw.length-hwOpen)/hw.length*100:0)+"%");
-
-    // habits meter
-    var hb=state.habits,tk=dayKey(now),hbDoneT=0;
-    for(var b=0;b<hb.length;b++){if(hb[b].log&&hb[b].log[tk])hbDoneT++}
-    setTxt(E.habSub,hb.length?(hb.length+" привыч. · сегодня "+hbDoneT):"пусто — добавьте привычку");
-    setTxt(E.habMeta,hb.length?(hbDoneT+" / "+hb.length):"—");
-    setW(E.habBar,(hb.length?hbDoneT/hb.length*100:0)+"%");
-
-    // bills summary
-    var bl=state.bills,unpaid=0,sum=0,over=0,next=null;
-    for(var k=0;k<bl.length;k++){var x=bl[k];if(!x.paid){unpaid++;sum+=(+x.amt||0);if(x.due<nowMs)over++;if(!next||x.due<next.due)next=x}}
-    setTxt(E.dueTotal,money(sum));
-    setTxt(E.blSub,bl.length?(unpaid+" не оплачено"+(over?" · "+over+" просроч.":"")):"пусто — добавьте платёж");
-    if(next){setTxt(E.nextCd,humanCd(next.due-nowMs));setTxt(E.nextName,next.name+" · "+money(next.amt))}
-    else{setTxt(E.nextCd,bl.length?"✓":"—");setTxt(E.nextName,bl.length?"всё оплачено":"нет платежей")}
-  }
-
-  /* ---------- boot ---------- */
-  tick();setInterval(tick,1000);
-  initStore();
-})();
-</script>
+<script src="app.js"></script>
+</body>
+</html>
