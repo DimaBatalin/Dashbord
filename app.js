@@ -7,16 +7,9 @@
   var V1_KEYS = ["homework", "habits", "bills", "movies"];
   var userName = "";
 
-  // Firebase web config is public by design; access is enforced by firestore.rules.
-  // Set to null to run fully offline.
-  var FIREBASE_CONFIG = {
-    apiKey: "***",
-    authDomain: "***.firebaseapp.com",
-    projectId: "***",
-    storageBucket: "***.firebasestorage.app",
-    messagingSenderId: "***",
-    appId: "1:***:web:46fe821fb90f25c8b710cd"
-  };
+  // Firebase config comes from firebase-config.js (not in the repo; generated on deploy).
+  // Without it the app runs fully offline.
+  var FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
   var FIREBASE_SDK = "https://www.gstatic.com/firebasejs/10.12.5/";
 
   /* =============================== helpers =============================== */
@@ -228,7 +221,7 @@
     b.addEventListener("click", onClick);
     return b;
   }
-  function emptyRow(list) { list.appendChild(h('<div class="empty">Пока пусто</div>')); }
+  function emptyRow(list, text) { var e = h('<div class="empty"></div>'); e.textContent = text || "Пока пусто"; list.appendChild(e); }
 
   var BLOCK_TYPES = {
     deadlines: {
@@ -462,9 +455,332 @@
         var t = (ctx.items().text || "").trim();
         return t ? t.split(/\s+/).length + " сл." : "пусто";
       }
+    },
+
+    schedule: {
+      label: "Расписание",
+      empty: function () { return { days: {} }; },
+      mount: function (ctx) {
+        ctx.day = String(new Date().getDay());
+        var tabs = h('<div class="tabs" role="tablist"></div>');
+        [1, 2, 3, 4, 5, 6, 0].forEach(function (d) {
+          var t = h('<button class="tab" type="button" role="tab" data-day="' + d + '">' + DSHORT[d] + "</button>");
+          t.addEventListener("click", function () { ctx.day = String(d); BLOCK_TYPES.schedule.update(ctx); });
+          tabs.appendChild(t);
+        });
+        ctx.tabs = ctx.body.appendChild(tabs);
+        var f = h('<div class="addf">' +
+          '<input class="time-in" type="time" aria-label="Начало" value="09:00">' +
+          '<input class="time-in" type="time" aria-label="Конец" value="10:30">' +
+          '<input class="grow" type="text" placeholder="Предмет" aria-label="Предмет">' +
+          '<input class="room-in" type="text" placeholder="Ауд." aria-label="Аудитория">' +
+          '<button class="addbtn" type="button">Добавить</button></div>');
+        var inp = f.querySelectorAll("input");
+        var add = function () {
+          var title = inp[2].value.trim();
+          if (!title || !inp[0].value) return;
+          var v = clone(ctx.items());
+          v.days = v.days || {};
+          v.days[ctx.day] = (v.days[ctx.day] || []).concat([{ id: newId(), start: inp[0].value, end: inp[1].value || inp[0].value, title: title, room: inp[3].value.trim() }]);
+          ctx.save(v);
+          inp[2].value = ""; inp[3].value = "";
+          inp[2].focus();
+        };
+        f.querySelector("button").addEventListener("click", add);
+        onEnter(inp[2], add); onEnter(inp[3], add);
+        ctx.body.appendChild(f);
+        ctx.list = ctx.body.appendChild(h('<div class="listwrap"></div>'));
+      },
+      update: function (ctx) {
+        var today = String(new Date().getDay());
+        Array.prototype.forEach.call(ctx.tabs.children, function (t) {
+          var d = t.getAttribute("data-day"), n = ((ctx.items().days || {})[d] || []).length;
+          t.classList.toggle("on", d === ctx.day);
+          t.classList.toggle("today", d === today);
+          t.classList.toggle("has", n > 0);
+          t.setAttribute("aria-selected", d === ctx.day ? "true" : "false");
+        });
+        var list = ctx.list, lessons = lessonsOf(ctx, ctx.day);
+        list.innerHTML = "";
+        if (!lessons.length) emptyRow(list, "Пар нет");
+        lessons.forEach(function (l) {
+          var r = h('<div class="row sc" data-start="' + esc(l.start) + '" data-end="' + esc(l.end) + '">' +
+            '<div class="sc-time mono">' + esc(l.start) + "–" + esc(l.end) + "</div>" +
+            '<div><div class="nm">' + esc(l.title) + "</div>" + (l.room ? '<div class="note">' + esc(l.room) + "</div>" : "") + "</div></div>");
+          r.appendChild(rowX(function () {
+            var v = clone(ctx.items());
+            v.days[ctx.day] = (v.days[ctx.day] || []).filter(function (x) { return x.id !== l.id; });
+            ctx.save(v);
+          }));
+          list.appendChild(r);
+        });
+        BLOCK_TYPES.schedule.tick(ctx, Date.now());
+      },
+      sub: function (ctx, now) {
+        var d = new Date(now), m = d.getHours() * 60 + d.getMinutes();
+        var ls = lessonsOf(ctx, String(d.getDay()));
+        if (!ls.length) return "сегодня пар нет";
+        for (var i = 0; i < ls.length; i++) {
+          var s = toMin(ls[i].start), e = toMin(ls[i].end);
+          if (m >= s && m < e) return "сейчас: " + ls[i].title + " · до " + ls[i].end;
+          if (m < s) return "далее: " + ls[i].title + " через " + humanCd((s - m) * MIN);
+        }
+        return "пары на сегодня закончились";
+      },
+      tick: function (ctx, now) {
+        var d = new Date(now), m = d.getHours() * 60 + d.getMinutes(), isToday = ctx.day === String(d.getDay()), nextMarked = false;
+        Array.prototype.forEach.call(ctx.list.querySelectorAll(".sc"), function (r) {
+          var s = toMin(r.getAttribute("data-start")), e = toMin(r.getAttribute("data-end"));
+          var cur = isToday && m >= s && m < e, next = isToday && !nextMarked && m < s;
+          if (next) nextMarked = true;
+          r.classList.toggle("now", cur);
+          r.classList.toggle("next", next);
+          r.classList.toggle("past", isToday && m >= e);
+        });
+      }
+    },
+
+    countdown: {
+      label: "Обратный отсчёт",
+      empty: function () { return []; },
+      mount: function (ctx) {
+        var f = h('<div class="addf">' +
+          '<input class="grow" type="text" placeholder="Событие" aria-label="Событие">' +
+          '<input type="date" aria-label="Дата">' +
+          '<input class="time-in" type="time" aria-label="Время">' +
+          '<button class="addbtn" type="button">Добавить</button></div>');
+        var inp = f.querySelectorAll("input");
+        var add = function () {
+          var title = inp[0].value.trim();
+          if (!title || !inp[1].value) return;
+          var p = inp[1].value.split("-"), t = (inp[2].value || "00:00").split(":");
+          ctx.add({ title: title, at: new Date(+p[0], +p[1] - 1, +p[2], +t[0], +t[1]).getTime() });
+          inp[0].value = ""; inp[1].value = ""; inp[2].value = "";
+          inp[0].focus();
+        };
+        f.querySelector("button").addEventListener("click", add);
+        onEnter(inp[0], add);
+        ctx.body.appendChild(f);
+        ctx.list = ctx.body.appendChild(h('<div class="listwrap"></div>'));
+      },
+      update: function (ctx) {
+        var now = Date.now(), items = ctx.items().slice();
+        items.sort(function (a, b) { return ((a.at < now) - (b.at < now)) || (a.at < now ? b.at - a.at : a.at - b.at); });
+        var list = ctx.list;
+        list.innerHTML = "";
+        if (!items.length) emptyRow(list);
+        items.forEach(function (ev) {
+          var d = new Date(ev.at);
+          var r = h('<div class="row cd-row">' +
+            '<div><div class="nm">' + esc(ev.title) + '</div><div class="note">' + d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear() +
+            (d.getHours() || d.getMinutes() ? ", " + pad(d.getHours()) + ":" + pad(d.getMinutes()) : "") + "</div></div>" +
+            '<div class="cd mono" data-at="' + esc(ev.at) + '"></div></div>');
+          r.appendChild(rowX(function () { ctx.remove(ev.id); }));
+          list.appendChild(r);
+        });
+        BLOCK_TYPES.countdown.tick(ctx, now);
+      },
+      sub: function (ctx, now) {
+        var next = null;
+        ctx.items().forEach(function (e) { if (e.at > now && (!next || e.at < next.at)) next = e; });
+        return next ? "ближайшее: " + next.title : (ctx.items().length ? "все события прошли" : "нет событий");
+      },
+      tick: function (ctx, now) {
+        Array.prototype.forEach.call(ctx.list.querySelectorAll(".cd"), function (c) {
+          var left = +c.getAttribute("data-at") - now;
+          setTxt(c, left > 0 ? humanCd(left) : "прошло");
+          c.parentNode.classList.toggle("past", left <= 0);
+        });
+      }
+    },
+
+    expenses: {
+      label: "Расходы",
+      empty: function () { return { limit: 0, items: [] }; },
+      mount: function (ctx) {
+        var n = new Date();
+        ctx.month = new Date(n.getFullYear(), n.getMonth(), 1).getTime();
+        var nav = h('<div class="ex-nav"><button class="ebtn" type="button" aria-label="Предыдущий месяц">‹</button>' +
+          '<span class="ex-month"></span><button class="ebtn" type="button" aria-label="Следующий месяц">›</button></div>');
+        var shift = function (k) {
+          var d = new Date(ctx.month);
+          ctx.month = new Date(d.getFullYear(), d.getMonth() + k, 1).getTime();
+          BLOCK_TYPES.expenses.update(ctx);
+        };
+        nav.querySelectorAll("button")[0].addEventListener("click", function () { shift(-1); });
+        nav.querySelectorAll("button")[1].addEventListener("click", function () { shift(1); });
+        ctx.nav = ctx.body.appendChild(nav);
+        ctx.summ = ctx.body.appendChild(h('<div class="ex-summ">' +
+          '<div class="m-top"><span class="lg mono"></span><label class="ex-limit">лимит <input class="num" type="number" min="0" step="100" placeholder="—" aria-label="Лимит на месяц"></label></div>' +
+          '<div class="track"><i></i></div></div>'));
+        var lim = ctx.summ.querySelector("input");
+        lim.addEventListener("change", function () {
+          var v = clone(ctx.items());
+          v.limit = Math.max(0, +lim.value || 0);
+          ctx.save(v);
+        });
+        var f = h('<div class="addf">' +
+          '<input class="num" type="number" min="0" step="1" placeholder="₽" aria-label="Сумма">' +
+          '<input class="grow" type="text" placeholder="Категория" aria-label="Категория" list="' + ctx.id + '-cats">' +
+          '<datalist id="' + ctx.id + '-cats"></datalist>' +
+          '<button class="addbtn" type="button">Добавить</button></div>');
+        var inp = f.querySelectorAll("input");
+        var add = function () {
+          var amt = +inp[0].value;
+          if (!(amt > 0)) return;
+          var v = clone(ctx.items()), d = new Date(ctx.month), now = new Date();
+          var at = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() ? now.getTime() : d.getTime() + 12 * H;
+          v.items = (v.items || []).concat([{ id: newId(), amt: amt, cat: inp[1].value.trim() || "Другое", at: at }]);
+          ctx.save(v);
+          inp[0].value = ""; inp[1].value = "";
+          inp[0].focus();
+        };
+        f.querySelector("button").addEventListener("click", add);
+        onEnter(inp[0], add); onEnter(inp[1], add);
+        ctx.cats = f.querySelector("datalist");
+        ctx.body.appendChild(f);
+        ctx.chart = ctx.body.appendChild(h('<div class="ex-chart"></div>'));
+        ctx.list = ctx.body.appendChild(h('<div class="listwrap"></div>'));
+      },
+      update: function (ctx) {
+        var v = ctx.items(), d = new Date(ctx.month);
+        setTxt(ctx.nav.querySelector(".ex-month"), MONTHS_FULL[d.getMonth()] + " " + d.getFullYear());
+        var mine = monthItems(v, ctx.month), total = 0, byCat = {}, allCats = {};
+        (v.items || []).forEach(function (x) { allCats[x.cat] = true; });
+        DEFAULT_CATS.forEach(function (c) { allCats[c] = true; });
+        ctx.cats.innerHTML = Object.keys(allCats).map(function (c) { return '<option value="' + esc(c) + '">'; }).join("");
+        mine.forEach(function (x) { total += x.amt; byCat[x.cat] = (byCat[x.cat] || 0) + x.amt; });
+
+        var lim = ctx.summ.querySelector("input");
+        if (document.activeElement !== lim) lim.value = v.limit || "";
+        setTxt(ctx.summ.querySelector(".lg"), money(total));
+        ctx.summ.querySelector(".track > i").style.width = (v.limit ? Math.min(100, total / v.limit * 100) : 0) + "%";
+        ctx.summ.querySelector(".track").hidden = !v.limit;
+        ctx.summ.classList.toggle("over", !!v.limit && total > v.limit);
+
+        var cats = Object.keys(byCat).sort(function (a, b) { return byCat[b] - byCat[a]; }), max = cats.length ? byCat[cats[0]] : 0;
+        ctx.chart.innerHTML = cats.map(function (c) {
+          return '<div class="ex-bar"><span class="ex-cat">' + esc(c) + '</span><span class="ex-track"><i style="width:' + (byCat[c] / max * 100).toFixed(1) + '%"></i></span>' +
+            '<span class="ex-val mono">' + money(byCat[c]) + "</span></div>";
+        }).join("");
+
+        var list = ctx.list;
+        list.innerHTML = "";
+        if (!mine.length) emptyRow(list, "Трат за месяц нет");
+        mine.slice().sort(function (a, b) { return b.at - a.at; }).forEach(function (x) {
+          var dt = new Date(x.at);
+          var r = h('<div class="row ex"><div class="note mono">' + pad(dt.getDate()) + "." + pad(dt.getMonth() + 1) + "</div>" +
+            '<div class="nm">' + esc(x.cat) + '</div><div class="amt">' + money(x.amt) + "</div></div>");
+          r.appendChild(rowX(function () {
+            var nv = clone(ctx.items());
+            nv.items = (nv.items || []).filter(function (y) { return y.id !== x.id; });
+            ctx.save(nv);
+          }));
+          list.appendChild(r);
+        });
+      },
+      sub: function (ctx) {
+        var n = new Date(), v = ctx.items(), t = 0;
+        monthItems(v, new Date(n.getFullYear(), n.getMonth(), 1).getTime()).forEach(function (x) { t += x.amt; });
+        return money(t) + " в этом месяце" + (v.limit ? " · лимит " + money(v.limit) : "");
+      }
+    },
+
+    table: {
+      label: "Таблица",
+      empty: function () { return { cols: ["Колонка 1", "Колонка 2"], rows: [] }; },
+      mount: function (ctx) {
+        ctx.wrap = ctx.body.appendChild(h('<div class="tbl-wrap"><table class="tbl"><thead></thead><tbody></tbody></table></div>'));
+        var bar = h('<div class="tbl-tools">' +
+          '<button class="tbtn" type="button">+ строка</button>' +
+          '<button class="tbtn" type="button">+ столбец</button>' +
+          '<button class="tbtn" type="button">− столбец</button></div>');
+        var b = bar.querySelectorAll("button");
+        b[0].addEventListener("click", function () {
+          var v = clone(ctx.items());
+          v.rows.push({ id: newId(), cells: v.cols.map(function () { return ""; }) });
+          ctx.save(v);
+        });
+        b[1].addEventListener("click", function () {
+          var v = clone(ctx.items());
+          if (v.cols.length >= 8) { toast("Не больше 8 столбцов"); return; }
+          v.cols.push("Колонка " + (v.cols.length + 1));
+          v.rows.forEach(function (r) { r.cells.push(""); });
+          ctx.save(v);
+        });
+        b[2].addEventListener("click", function () {
+          var v = clone(ctx.items());
+          if (v.cols.length <= 1) return;
+          var last = v.cols.length - 1;
+          if (v.rows.some(function (r) { return (r.cells[last] || "").trim(); }) &&
+              !window.confirm("Удалить столбец «" + v.cols[last] + "» вместе с данными?")) return;
+          v.cols.pop();
+          v.rows.forEach(function (r) { r.cells.length = v.cols.length; });
+          ctx.save(v);
+        });
+        ctx.body.appendChild(bar);
+
+        // Cells save on blur; Enter finishes editing.
+        ctx.wrap.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" && e.target.isContentEditable) { e.preventDefault(); e.target.blur(); }
+        });
+        ctx.wrap.addEventListener("focusout", function (e) {
+          var el = e.target;
+          if (!el.isContentEditable) return;
+          var v = clone(ctx.items()), val = el.textContent.trim(), c = +el.getAttribute("data-c");
+          if (el.tagName === "TH") {
+            if (v.cols[c] === val) return;
+            v.cols[c] = val || "Колонка " + (c + 1);
+          } else {
+            var row = v.rows.filter(function (r) { return r.id === el.getAttribute("data-r"); })[0];
+            if (!row || (row.cells[c] || "") === val) return;
+            row.cells[c] = val;
+          }
+          ctx.save(v);
+        });
+      },
+      update: function (ctx) {
+        if (ctx.wrap.contains(document.activeElement)) { ctx.dirty = true; return; }
+        var v = ctx.items();
+        ctx.wrap.querySelector("thead").innerHTML = "<tr>" + v.cols.map(function (c, i) {
+          return '<th contenteditable="true" data-c="' + i + '">' + esc(c) + "</th>";
+        }).join("") + '<th class="tbl-x"></th></tr>';
+        var tb = ctx.wrap.querySelector("tbody");
+        tb.innerHTML = "";
+        v.rows.forEach(function (r) {
+          var tr = h("<table><tbody><tr>" + v.cols.map(function (_, i) {
+            return '<td contenteditable="true" data-r="' + esc(r.id) + '" data-c="' + i + '">' + esc(r.cells[i] || "") + "</td>";
+          }).join("") + '<td class="tbl-x"></td></tr></tbody></table>').querySelector("tr");
+          tr.lastChild.appendChild(rowX(function () {
+            var nv = clone(ctx.items());
+            nv.rows = nv.rows.filter(function (x) { return x.id !== r.id; });
+            ctx.save(nv);
+          }));
+          tb.appendChild(tr);
+        });
+        if (!v.rows.length) {
+          tb.appendChild(h('<table><tbody><tr><td class="empty" colspan="' + (v.cols.length + 1) + '">Пока пусто — нажмите «+ строка»</td></tr></tbody></table>').querySelector("tr"));
+        }
+      },
+      sub: function (ctx) { var v = ctx.items(); return v.rows.length ? v.rows.length + " " + plural(v.rows.length, "строка", "строки", "строк") + " · " + v.cols.length + " " + plural(v.cols.length, "столбец", "столбца", "столбцов") : "пусто"; },
+      tick: function (ctx) {
+        if (ctx.dirty && !ctx.wrap.contains(document.activeElement)) { ctx.dirty = false; BLOCK_TYPES.table.update(ctx); }
+      }
     }
   };
-  var TYPE_ORDER = ["deadlines", "habits", "payments", "list", "checklist", "note"];
+  var TYPE_ORDER = ["deadlines", "habits", "payments", "list", "checklist", "note", "schedule", "countdown", "expenses", "table"];
+  var DSHORT = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+  var MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  var MONTHS_FULL = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+  var DEFAULT_CATS = ["Еда", "Транспорт", "Развлечения", "Покупки", "Связь", "Здоровье", "Другое"];
+  function toMin(t) { var p = String(t || "0:0").split(":"); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+  function lessonsOf(ctx, day) {
+    return ((ctx.items().days || {})[day] || []).slice().sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
+  }
+  function monthItems(v, monthStart) {
+    var d = new Date(monthStart), end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+    return (v.items || []).filter(function (x) { return x.at >= monthStart && x.at < end; });
+  }
 
   /* ============================== layout ============================== */
 
@@ -732,6 +1048,128 @@
     e.target.value = "";
   });
 
+  /* ============================== reminders ============================== */
+  // Checked once a minute while the app is open (or minimised as an installed app).
+  // Without a server nothing can fire when the app is fully closed.
+
+  var notifyOn = false, audioCtx = null, lastCheck = 0, firstCheck = true;
+  try { notifyOn = localStorage.getItem("daydeck:notify") === "on" && "Notification" in window && Notification.permission === "granted"; } catch (e) {}
+
+  function paintNotify() { $("notifyBtn").textContent = notifyOn ? "🔔 Напоминания" : "🔕 Напоминания"; }
+  $("notifyBtn").addEventListener("click", function () {
+    if (!("Notification" in window)) { toast("Браузер не поддерживает уведомления"); return; }
+    try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    if (notifyOn) {
+      notifyOn = false;
+      toast("Напоминания выключены");
+    } else if (Notification.permission === "denied") {
+      toast("Уведомления запрещены в настройках браузера для этого сайта");
+    } else {
+      Notification.requestPermission().then(function (p) {
+        notifyOn = p === "granted";
+        try { localStorage.setItem("daydeck:notify", notifyOn ? "on" : "off"); } catch (e) {}
+        paintNotify();
+        toast(notifyOn ? "Напоминания включены" : "Разрешение не получено");
+        if (notifyOn) beep();
+      });
+      return;
+    }
+    try { localStorage.setItem("daydeck:notify", notifyOn ? "on" : "off"); } catch (e) {}
+    paintNotify();
+  });
+  paintNotify();
+
+  function beep() {
+    if (!audioCtx || document.hidden) return;
+    try {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      [[880, 0], [1320, 0.16]].forEach(function (n) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + n[1];
+        o.type = "sine"; o.frequency.value = n[0];
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(t); o.stop(t + 0.25);
+      });
+    } catch (e) {}
+  }
+
+  function showSystem(title, body, tag) {
+    var opts = { body: body, tag: tag, icon: "icons/icon-192.png", badge: "icons/icon-192.png" };
+    var fallback = function () { try { new Notification(title, opts); } catch (e) {} };
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (reg && reg.showNotification) reg.showNotification(title, opts).catch(fallback); else fallback();
+      }).catch(fallback);
+    } else fallback();
+  }
+
+  function collectReminders(nowMs) {
+    var out = [], now = new Date(nowMs), today = dayKey(now), hr = now.getHours();
+    var tomorrow = new Date(nowMs); tomorrow.setDate(tomorrow.getDate() + 1);
+    var tmr = dayKey(tomorrow);
+    layout().forEach(function (b) {
+      var v = data["b_" + b.id];
+      if (v == null) return;
+      if (b.type === "deadlines") {
+        v.forEach(function (t) {
+          if (t.done) return;
+          var left = t.due - nowMs, key = b.id + ":" + t.id + ":" + t.due + ":";
+          if (left <= 0 && left > -D) out.push({ key: key + "over", text: "Просрочено: " + t.title });
+          else if (left > 0 && left <= H) out.push({ key: key + "1h", text: "Меньше часа: " + t.title });
+          else if (left > H && left <= D) out.push({ key: key + "24h", text: "Срок сегодня-завтра: " + t.title });
+        });
+      } else if (b.type === "payments") {
+        if (hr < 9) return;
+        v.forEach(function (x) {
+          if (x.paid) return;
+          var dk = dayKey(new Date(x.due)), key = b.id + ":" + x.id + ":" + x.due + ":";
+          if (dk === today) out.push({ key: key + "day", text: "Оплатить сегодня: " + x.name + " · " + money(x.amt) });
+          else if (dk === tmr) out.push({ key: key + "pre", text: "Завтра платёж: " + x.name + " · " + money(x.amt) });
+        });
+      } else if (b.type === "habits") {
+        if (hr < 20 || !v.length) return;
+        var left = v.filter(function (x) { return !(x.log && x.log[today]); });
+        if (left.length) out.push({ key: b.id + ":habits:" + today, text: "Привычки на сегодня: " + left.map(function (x) { return x.name; }).join(", ") });
+      } else if (b.type === "countdown") {
+        v.forEach(function (e) {
+          if (dayKey(new Date(e.at)) === today && e.at > nowMs - D) out.push({ key: b.id + ":" + e.id + ":" + e.at + ":day", text: "Сегодня: " + e.title });
+        });
+      }
+    });
+    return out;
+  }
+
+  function checkReminders(nowMs) {
+    if (!store || !Array.isArray(data.layout)) return;
+    if (nowMs - lastCheck < MIN && !firstCheck) return;
+    lastCheck = nowMs;
+    var sent = {};
+    try { sent = JSON.parse(localStorage.getItem("daydeck:sent") || "{}") || {}; } catch (e) {}
+    for (var k in sent) if (nowMs - sent[k] > 7 * D) delete sent[k];
+    var fresh = collectReminders(nowMs).filter(function (r) { return !sent[r.key]; });
+    var wasFirst = firstCheck;
+    firstCheck = false;
+    if (!fresh.length) return;
+    fresh.forEach(function (r) { sent[r.key] = nowMs; });
+    try { localStorage.setItem("daydeck:sent", JSON.stringify(sent)); } catch (e) {}
+
+    var summary = fresh.length > 2 || wasFirst;
+    var title = summary ? fresh.length + " " + plural(fresh.length, "напоминание", "напоминания", "напоминаний") : "Пульт дня";
+    var body = fresh.map(function (r) { return r.text; }).join("\n");
+    toast(summary ? title + ": " + fresh[0].text + (fresh.length > 1 ? " и ещё " + (fresh.length - 1) : "") : fresh[0].text);
+    if (notifyOn) {
+      if (summary) showSystem(title, body, "summary");
+      else fresh.forEach(function (r) { showSystem("Пульт дня", r.text, r.key); });
+      beep();
+    }
+  }
+  function plural(n, one, few, many) {
+    var m10 = n % 10, m100 = n % 100;
+    return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? few : many;
+  }
+
   /* ============================== greeting ============================== */
 
   function paintGreeting() {
@@ -795,6 +1233,7 @@
     E.habMeter.hidden = !hb.has;
     setTxt(E.habMeta, hb.n ? hb.today + " / " + hb.n : "—");
     setW(E.habBar, (hb.n ? hb.today / hb.n * 100 : 0) + "%");
+    checkReminders(nowMs);
   }
 
   /* ================================ boot ================================ */

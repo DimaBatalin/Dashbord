@@ -1,8 +1,9 @@
-const CACHE = "pult-dnya-v3";
+const CACHE = "pult-dnya-v4";
 const SHELL = [
   "./",
   "./index.html",
   "./styles.css",
+  "./firebase-config.js",
   "./app.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
@@ -54,4 +55,15 @@ self.addEventListener("fetch", (event) => {
       }))
     );
   }
+});
+
+// Clicking a reminder focuses the open app or opens it.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) if ("focus" in c) return c.focus();
+      return self.clients.openWindow("./");
+    })
+  );
 });
