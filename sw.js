@@ -1,10 +1,19 @@
-const CACHE = "pult-dnya-v4";
+const CACHE = "pult-dnya-v5";
 const SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./firebase-config.js",
-  "./app.js",
+  "./js/core.js",
+  "./js/blocks/basic.js",
+  "./js/blocks/generic.js",
+  "./js/blocks/work.js",
+  "./js/blocks/money.js",
+  "./js/blocks/home.js",
+  "./js/blocks/personal.js",
+  "./js/blocks/tools.js",
+  "./js/blocks/overview.js",
+  "./js/app.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.png",

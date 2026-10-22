@@ -28,7 +28,7 @@ jobs:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: |
           mkdir -p _site
-          cp -r index.html styles.css app.js sw.js manifest.webmanifest icons _site/
+          cp -r index.html styles.css js sw.js manifest.webmanifest icons _site/
           if [ -n "$FIREBASE_CONFIG" ]; then
             printf 'window.FIREBASE_CONFIG = %s;\n' "$FIREBASE_CONFIG" > _site/firebase-config.js
           else
